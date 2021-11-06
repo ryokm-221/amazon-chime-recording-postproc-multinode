@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'docker component for final recording process of Amazon Chime SDK'
+
+Parameters: 
+  BuildName:
+    Type: String
+    Default: chimeSDK-rec-finishproc-build
+    Description: build name
+
+Mappings: 
+  Env:
+    REPO: 
+      Name: IMAGE_REPO_NAME
+      Value: "chime/rec-finishproc"
+      Type: PLAINTEXT
+    REGION: 
+      Name: AWS_DEFAULT_REGION
+      Value: us-east-1
+      Type: PLAINTEXT
+
+Resources:
+  PostProcessBuildProject:  
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts: 
+        Type: NO_ARTIFACTS
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        EnvironmentVariables:
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref "AWS::AccountId"
+            Type: PLAINTEXT
+          - Name: !FindInMap [ Env, REPO, Name ]
+            Value: !FindInMap [ Env, REPO, Value ]
+            Type: !FindInMap [ Env, REPO, Type ]
+          - Name: !FindInMap [ Env, REGION, Name ]
+            Value: !FindInMap [ Env, REGION, Value ]
+            Type: !FindInMap [ Env, REGION, Type ]
+          - Name: DOCKER_HUB_ID
+            Value: /CodeBuild/DOCKER_HUB_ID
+            Type: PARAMETER_STORE
+          - Name: DOCKER_HUB_PASSWORD
+            Value: /CodeBuild/DOCKER_HUB_PASSWORD
+            Type: PARAMETER_STORE
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        PrivilegedMode: true
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: CodeBuild
+          Status: ENABLED
+          StreamName: !Ref BuildName
+      Name: !Ref BuildName
+      ResourceAccessRole: !GetAtt ResourceRole.Arn
+      ServiceRole: !GetAtt BuildExcutionRole.Arn
+      Source:
+        Location: buildtmp/finish-process.zip
+        Type: S3
+  
+  BuildExcutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - codebuild.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+      Policies:
+        - 
+         PolicyName: "CodeBuildECRAccessPolicy"
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+              - 
+                Effect: "Allow"
+                Action: 
+                - ecr:BatchCheckLayerAvailability
+                - ecr:BatchGetImage
+                - ecr:CompleteLayerUpload
+                - ecr:GetAuthorizationToken
+                - ecr:GetDownloadUrlForLayer
+                - ecr:InitiateLayerUpload
+                - ecr:PutImage
+                - ecr:UploadLayerPart
+                Resource: "*"
+  
+  ResourceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - codebuild.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: / 
+      Policies:
+        - 
+         PolicyName: CloudWatchLogsAndS3AccessPolicy
+         PolicyDocument:
+           Version: "2012-10-17"
+           Statement:
+              - 
+                Effect: Allow
+                Action: 
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                Resource: 
+                - arn:aws:logs:*:*:log-group:CodeBuild
+                - arn:aws:logs:*:*:log-group:CodeBuild:*
+              - 
+                Effect: Allow
+                Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:GetObjectVersion
+                - s3:GetBucketAcl
+                - s3:GetBucketLocation
+                Resource:
+                - arn:aws:s3:::*

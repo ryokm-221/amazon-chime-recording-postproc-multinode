@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Compute Env for Amazon Chime SDK Recording PostProcess Batch Job
+
+Parameters: 
+  Subnet1:
+    Type: String
+    Default: subnet-0d40fe1540f65fb47
+    Description: subnet Ids where ec2 will be deployed
+  Subnet2:
+    Type: String
+    Default: subnet-04021d2572ef446bb
+    Description: subnet Ids where ec2 will be deployed
+  VpcId:
+    Type: String
+    Default: vpc-0dc7b5d853f60adbf
+    Description: vpc Id of subnets
+
+
+Resources:
+  BatchComputeEnv:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName: chimeSDK_recording_post-process_Env_EC2
+      ComputeResources: 
+        AllocationStrategy: BEST_FIT_PROGRESSIVE
+        DesiredvCpus: 0
+        InstanceRole: !GetAtt ecsInstanceProfile.Arn
+        InstanceTypes: 
+        - optimal
+        LaunchTemplate: 
+          LaunchTemplateId: !Ref LaunchTemplateforBatchEnv
+          Version: $Default
+        MaxvCpus: 512
+        MinvCpus: 0
+        SecurityGroupIds: 
+        - !GetAtt SecurityGroupforBatchEnv.GroupId
+        Subnets:
+        - !Ref Subnet1
+        - !Ref Subnet2
+        Type: EC2
+      State: ENABLED
+      Type: MANAGED
+  
+  LaunchTemplateforBatchEnv:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: Increased-volume-for-Batch
+      LaunchTemplateData:
+        BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Iops: 3000
+            VolumeSize: 100
+            VolumeType: gp3
+  
+  SecurityGroupforBatchEnv:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: rec-postproc-sg
+      GroupDescription: sg for ecs container
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 443
+          ToPort: 443
+          IpProtocol: tcp
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          ToPort: 80
+          IpProtocol: tcp
+        - CidrIp: 0.0.0.0/0
+          FromPort: -1
+          ToPort: -1
+          IpProtocol: icmp
+      SecurityGroupEgress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+  
+  ecsInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /
+      AssumeRolePolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/AmazonS3FullAccess
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+  
+  ecsInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ecsInstanceRole
+  
+  # BatchRole:
+  #   Type: AWS::IAM::Role
+  #   Properties:
+  #     Path: /
+  #     AssumeRolePolicyDocument: 
+  #       Version: 2012-10-17
+  #       Statement:
+  #       - Effect: Allow
+  #         Principal:
+  #           Service:
+  #           - batch.amazonaws.com
+  #         Action: sts:AssumeRole
+  #     ManagedPolicyArns:
+  #     - arn:aws:iam::aws:policy/aws-service-role/BatchServiceRolePolicy

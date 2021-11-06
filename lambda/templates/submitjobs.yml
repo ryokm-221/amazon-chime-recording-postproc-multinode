@@ -1,0 +1,48 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'lambda function (submitjobs) for post recording process of Amazon Chime SDK'
+
+Resources:
+  SubmitJobsFunction:
+    Type: AWS::Lambda::Function
+    Properties: 
+      FunctionName: recording-submit-jobs
+      Handler: index.handler
+      Role: !GetAtt SubmitjobExcutionRole.Arn
+      Code: ../src/job-submit.js
+      Runtime: nodejs14.x
+      Timeout: 10
+
+  SubmitjobExcutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            Resource: arn:aws:logs:*:*:*
+      - PolicyName: batchSubmitRole
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: batch:SubmitJob
+            Resource: 
+            - arn:aws:batch:*:*:job-definition/*:*
+            - arn:aws:batch:*:*:job-que/*
+      ManagedPolicyArns: 
+      - 'arn:aws:iam::aws:policy/AmazonDynamoDBReadOnlyAccess'
+      RoleName: SubmitjobExcutionRole
