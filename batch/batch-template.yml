@@ -4,15 +4,15 @@ Description: Compute Env for Amazon Chime SDK Recording PostProcess Batch Job
 Parameters: 
   Subnet1:
     Type: String
-    Default: subnet-0d40fe1540f65fb47
+    Default: ---SUBNET ID HERE---
     Description: subnet Ids where ec2 will be deployed
   Subnet2:
     Type: String
-    Default: subnet-04021d2572ef446bb
+    Default: ---SUBNET ID HERE---
     Description: subnet Ids where ec2 will be deployed
   VpcId:
     Type: String
-    Default: vpc-0dc7b5d853f60adbf
+    Default: ---VPC ID HERE---
     Description: vpc Id of subnets
 
 
@@ -40,6 +40,18 @@ Resources:
         Type: EC2
       State: ENABLED
       Type: MANAGED
+  
+  # BatchJobDef:
+
+  BatchJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      ComputeEnvironmentOrder:
+      - ComputeEnvironment: !Ref BatchComputeEnv
+        Order: 1
+      JobQueueName: chimeSDK_recording_post-process_Job-Que
+      Priority: 1
+      State: ENABLED
   
   LaunchTemplateforBatchEnv:
     Type: AWS::EC2::LaunchTemplate
@@ -98,18 +110,3 @@ Resources:
     Properties:
       Roles:
         - !Ref ecsInstanceRole
-  
-  # BatchRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     Path: /
-  #     AssumeRolePolicyDocument: 
-  #       Version: 2012-10-17
-  #       Statement:
-  #       - Effect: Allow
-  #         Principal:
-  #           Service:
-  #           - batch.amazonaws.com
-  #         Action: sts:AssumeRole
-  #     ManagedPolicyArns:
-  #     - arn:aws:iam::aws:policy/aws-service-role/BatchServiceRolePolicy
