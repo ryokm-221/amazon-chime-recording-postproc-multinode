@@ -1,0 +1,17 @@
+version: 2.1
+jobs:
+  cfn-lint:
+    docker:
+      - image: circleci/python:latest
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run: sudo pip install cfn-lint
+      - run: cfn-lint --template batch/batch-template.yml
+      - run: cfn-lint --template app/templates/post-process.yml
+      - run: cfn-lint --template app/templates/finish-process.yml
+
+workflows:
+  workflow:
+    jobs:
+      - cfn-lint
