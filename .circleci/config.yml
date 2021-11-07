@@ -10,8 +10,6 @@ jobs:
       - run: cfn-lint --template batch/batch-template.yml
       - run: cfn-lint --template app/templates/post-process.yml
       - run: cfn-lint --template app/templates/finish-process.yml
-      - run: cfn-lint --template lambda/templates/submitjobs.yml
-      - run: cfn-lint --template lambda/templates/bucketfilecount.yml
 
 workflows:
   workflow:
