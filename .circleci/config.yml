@@ -6,7 +6,7 @@ jobs:
     working_directory: ~/project
     steps:
       - checkout
-      - run: sudo pip install cnf-lint
+      - run: sudo pip install cfn-lint
       - run: cfn-lint --template batch/batch-template.yml
 workflows:
   workflow:
