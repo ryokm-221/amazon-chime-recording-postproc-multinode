@@ -1,4 +1,18 @@
 version: 2.1
+
+orbs:
+  slack: circleci/slack@4.3.0
+
+commands:
+  notify_slack:
+    steps:
+      - slack/notify:
+          event: pass
+          template: basic_success_1
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+
 jobs:
   cfn-lint:
     docker:
@@ -10,6 +24,7 @@ jobs:
       - run: cfn-lint --template batch/batch-template.yml
       - run: cfn-lint --template app/templates/post-process.yml
       - run: cfn-lint --template app/templates/finish-process.yml
+      - notify_slack
 
 workflows:
   workflow:
